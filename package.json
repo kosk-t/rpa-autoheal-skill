@@ -4,14 +4,23 @@
   "description": "Claude Code 用のブラウザ自動化スキル。Playwright MCP を使用してブラウザ操作を自動化。",
   "main": "run-workflow.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "jest",
+    "test:schema": "jest tests/workflow-schema.test.js",
+    "test:yaml-to-js": "jest tests/yaml-to-js.test.js",
+    "test:integration": "jest tests/integration.test.js",
+    "convert": "node scripts/yaml-to-js.js"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "type": "commonjs",
   "dependencies": {
+    "ajv": "^8.17.1",
+    "ajv-formats": "^3.0.1",
     "js-yaml": "^4.1.1",
     "playwright": "^1.57.0"
+  },
+  "devDependencies": {
+    "jest": "^30.2.0"
   }
 }
