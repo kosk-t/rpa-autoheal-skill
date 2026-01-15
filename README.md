@@ -152,50 +152,46 @@ rpa-autoheal-skill/
 ├── .claude/
 │   └── skills/               # Claude Codeスキル本体
 │       ├── rpa-explore/      # 探索モード
+│       │   └── references/   # 探索モード用リファレンス
 │       └── rpa-execute/      # 実行モード
+│           └── references/   # 実行モード用リファレンス
+│
+├── rpa-docs/                 # RPA共通ドキュメント
+│   ├── actions.md            # アクション定義
+│   └── selectors.md          # セレクタ形式
 │
 ├── workflows/                # ワークフローYAML定義
 ├── generated/                # 生成されたJSテンプレートキャッシュ
 └── improvements/             # 改善レポート
 ```
 
-## 参照ファイルの役割
+## スキルとリファレンスファイル
 
-### SKILL.md - エントリポイント
+### rpa-explore（探索モード）
 
-ユーザーの指示からモードを判断し、適切な references/ ファイルに誘導。
+| ファイル | 説明 |
+|----------|------|
+| `SKILL.md` | 探索モードのメインドキュメント |
+| `references/workflow-template.yaml` | YAMLの構造テンプレート |
+| `references/selectors.md` | セレクタ取得コード例 |
 
-### references/explore.md - 探索モード
+**フロー**: 記録 → テスト → 改善
 
-| 内容 | 説明 |
-|------|------|
-| フロー | 記録 → テスト → 改善 |
-| セレクタ取得 | `browser_evaluate` でCSSセレクタを取得 |
-| YAML出力 | 操作完了後に `workflows/` に保存 |
+### rpa-execute（実行モード）
 
-### references/execute.md - 実行モード
+| ファイル | 説明 |
+|----------|------|
+| `SKILL.md` | 実行モードのメインドキュメント |
+| `references/improvement-report.md` | 改善レポートテンプレート |
 
-| 内容 | 説明 |
-|------|------|
-| フロー | YAML読込 → Task起動 → 1件ずつ実行 |
-| フォールバック | `ai_search` でスナップショット解析 |
-| 改善レポート | `improvements/` に出力 |
+**フロー**: JSテンプレート読込 → `browser_run_code` 実行 → フォールバック対応 → 改善レポート出力
 
-### references/fast-execute.md - 高速実行モード
+### rpa-docs（共通ドキュメント）
 
-| 内容 | 説明 |
-|------|------|
-| フロー | YAML → コード生成 → `browser_run_code` |
-| キャッシュ | `generated/` に保存、2回目以降は生成スキップ |
-| MCPフォールバック | 失敗ステップのみMCPで補助 |
-
-### references/improve.md - 改善モード
-
-| 内容 | 説明 |
-|------|------|
-| 入力 | 改善レポート + ユーザー指示 |
-| 出力 | 改善されたYAML |
-| 機能 | 条件分岐追加、セレクタ修正、ステップ追加 |
+| ファイル | 説明 |
+|----------|------|
+| `actions.md` | アクション定義（全アクションの詳細） |
+| `selectors.md` | セレクタ形式の優先順位・禁止形式 |
 
 ## YAML構造
 
@@ -258,6 +254,9 @@ output:                      # 出力定義（オプション）
 | `fill` | テキスト入力 | `selector`, `value` | `hint` |
 | `click` | クリック | `selector` | `hint` |
 | `press` | キー入力 | `selector`, `key` | `hint` |
+| `type` | キーボード入力（フォーカス位置） | `value` | `hint` |
+| `select` | ドロップダウン選択 | `selector`, `value` | `hint` |
+| `file_upload` | ファイルアップロード | `selector`, `file` | `hint` |
 | `wait` | 要素待機 | `selector` | `timeout` |
 | `playwright_code` | カスタムコード | `code` | `output` |
 
@@ -353,17 +352,20 @@ flowchart LR
 | **スキーマ検証** | JSON Schemaで構文エラーを事前検出 |
 | **変数補間** | `${input.xxx}`, `${extract.xxx}`, `${constants.xxx}` を展開 |
 | **条件分岐** | `when` 句をJavaScript条件式に変換 |
-| **アクション変換** | navigate, fill, click, press, wait, playwright_code に対応 |
+| **アクション変換** | navigate, fill, click, press, type, select, file_upload, wait, playwright_code に対応 |
 
 #### サポートされるアクション
 
 | action | 生成されるPlaywrightコード |
 |--------|---------------------------|
 | `navigate` | `page.goto(url)` |
-| `fill` | `page.locator(selector).fill(value)` |
-| `click` | `page.locator(selector).click()` |
-| `press` | `page.locator(selector).press(key)` |
-| `wait` | `page.locator(selector).waitFor({ timeout })` |
+| `fill` | `page.fill(selector, value)` |
+| `click` | `page.click(selector)` |
+| `press` | `page.press(selector, key)` |
+| `type` | `page.keyboard.type(value)` |
+| `select` | `page.selectOption(selector, value)` |
+| `file_upload` | `page.setInputFiles(selector, path)` |
+| `wait` | `page.waitForSelector(selector, { timeout })` |
 | `playwright_code` | カスタムコードをそのまま埋め込み |
 
 ## スタンドアロン実行（run-workflow.js）

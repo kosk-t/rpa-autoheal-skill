@@ -14,16 +14,18 @@
 
 | Component | Technology | Purpose |
 |-----------|------------|---------|
-| **Primary Language** | TypeScript | 型安全性、開発効率、Playwrightとの親和性 |
+| **Primary Language** | JavaScript (CommonJS) | シンプルで実行可能なコード生成 |
 | **Runtime** | Node.js | JavaScript実行環境 |
-| **Package Manager** | npm / yarn | 依存関係管理 |
+| **Package Manager** | npm | 依存関係管理 |
 
 ### Workflow Definition
 
 | Component | Technology | Purpose |
 |-----------|------------|---------|
 | **Workflow Format** | YAML | 人間が読める宣言的ワークフロー定義 |
-| **Schema Validation** | JSON Schema / Zod | YAMLスキーマの検証 |
+| **YAML Parser** | js-yaml | YAMLファイルのパース |
+| **Schema Validation** | AJV + JSON Schema | YAMLスキーマの検証 |
+| **Schema Formats** | ajv-formats | URI等の形式バリデーション |
 | **Knowledge Store** | SKILL.md (Markdown) | Claudeへのドメイン知識定義 |
 
 ### Version Control & Collaboration
@@ -39,30 +41,21 @@
 
 | Component | Technology | Purpose |
 |-----------|------------|---------|
-| **Test Framework** | Vitest / Jest | ユニットテスト、統合テスト |
-| **E2E Testing** | Playwright Test | ワークフロー実行のE2Eテスト |
-| **Linting** | ESLint | コード品質チェック |
-| **Formatting** | Prettier | コードフォーマット統一 |
-
-### Build & Deployment
-
-| Component | Technology | Purpose |
-|-----------|------------|---------|
-| **Build Tool** | tsup / esbuild | TypeScriptビルド |
-| **CI/CD** | GitHub Actions | 自動テスト、リリース |
+| **Test Framework** | Jest | ユニットテスト、統合テスト |
+| **E2E Testing** | Playwright | ワークフロー実行のE2Eテスト |
 
 ## Architecture Patterns
 
 ### Execution Model
 
 ```
-[自然言語] → [Claude] → [YAML] → [Code Generator] → [Playwright Code]
-                                                            ↓
-                                                    [高速決定論的実行]
-                                                            ↓
-                                                    [失敗検知] → [Playwright MCP] → [Claude] → [AIリカバリ]
-                                                            ↓
-                                                    [失敗分析] → [YAML自動修正]
+[自然言語] → [Claude] → [YAML] → [Code Generator] → [JavaScript Code]
+                                                          ↓
+                                                  [高速決定論的実行]
+                                                          ↓
+                                                  [失敗検知] → [Playwright MCP] → [Claude] → [AIリカバリ]
+                                                          ↓
+                                                  [失敗分析] → [YAML自動修正]
 ```
 
 ### Key Design Principles
@@ -76,34 +69,40 @@
 
 ```
 project/
-├── skills/
-│   └── SKILL.md              # ドメイン知識定義
 ├── workflows/
 │   └── *.yaml                # ワークフロー定義
-├── src/
-│   ├── parser/               # YAMLパーサー
-│   ├── generator/            # Playwrightコード生成
-│   ├── runtime/              # 実行エンジン
-│   ├── recovery/             # AIリカバリ
-│   └── analysis/             # 失敗分析
-├── generated/                # 生成されたPlaywrightコード
-├── logs/                     # 実行ログ
-└── reports/                  # 失敗分析レポート
+├── schemas/
+│   └── workflow.schema.json  # JSON Schema定義
+├── scripts/
+│   └── yaml-to-js.js         # YAML→JSコンバーター
+├── generated/
+│   └── *.template.js         # 生成されたJavaScriptコード
+├── tests/
+│   ├── workflow-schema.test.js   # スキーマバリデーションテスト
+│   ├── yaml-to-js.test.js        # コンバーターテスト
+│   ├── integration.test.js       # 統合テスト
+│   └── helpers/                  # テストヘルパー
+├── run-workflow.js           # ワークフロー実行エントリーポイント
+└── package.json              # プロジェクト設定
 ```
 
 ## Dependencies
 
 ### Production Dependencies
 
-- `playwright` - ブラウザ自動化
-- `yaml` - YAML パース
-- `zod` - スキーマバリデーション
-- `commander` - CLI構築
+```json
+{
+  "playwright": "^1.57.0",    // ブラウザ自動化
+  "js-yaml": "^4.1.1",        // YAMLパース
+  "ajv": "^8.17.1",           // JSON Schemaバリデーション
+  "ajv-formats": "^3.0.1"     // 追加フォーマット検証
+}
+```
 
 ### Development Dependencies
 
-- `typescript` - 型システム
-- `vitest` - テストフレームワーク
-- `eslint` - リンター
-- `prettier` - フォーマッター
-- `tsup` - ビルドツール
+```json
+{
+  "jest": "^30.2.0"           // テストフレームワーク
+}
+```

@@ -2,32 +2,33 @@
 # 探索モードで自動生成されるが、手動で作成・編集も可能
 #
 # 【重要】セレクタは純粋なCSSセレクタを使用すること
-# アクション定義: references/actions.md を参照
+# アクション定義: rpa-docs/actions.md を参照
+# スキーマ: schemas/workflow.schema.json
 
-name: workflow-name           # ワークフロー識別子
+name: workflow-name           # 必須: kebab-case形式
 description: ワークフローの説明
-version: "1.0"
 
 # 入力パラメータ（オプション）
+# type: string | number | boolean | image
 input:
   image_file:
-    type: image               # image | pdf | text | file
+    type: image
     description: "入力画像"
     required: false
-  documents:
-    type: file[]              # 配列（複数ファイル）
-    description: "複数のドキュメント"
-    repeat: true              # 各ファイルでstepsを繰り返す
-    required: false
-  text_value:
-    type: text
-    description: "テキスト入力"
-    required: false
+  keyword:
+    type: string
+    description: "検索キーワード"
+    required: true
+    example: "laptop"
+  count:
+    type: number
+    description: "件数"
+    default: 10
 
-# 抽出（与えられたファイルから情報を読み取る）
-extract:
-  - field: field_name
-    prompt: "ファイルから抽出する内容の指示"
+# 定数値（オプション）
+constants:
+  base_url: "https://example.com"
+  timeout: 5000
 
 # 自動化ステップ
 steps:
@@ -35,7 +36,6 @@ steps:
   - name: ページを開く
     action: navigate
     url: https://example.com
-    wait: 2000                # ミリ秒
 
   # 要素の待機
   - name: ページ読み込み待機
@@ -48,7 +48,6 @@ steps:
     action: wait
     selector: "#user-menu"          # ログイン後に表示される要素
     timeout: 120000                 # 2分（手動ログイン用）
-    requires_manual_login: true     # 高速実行時にユーザーに通知
     hint: "ログインしてください。完了後、自動的に続行します"
 
   # クリック
@@ -57,43 +56,49 @@ steps:
     selector: "#submit-btn"
     hint: "送信ボタン（青色、画面右下）"  # フォールバック時のAI向けヒント
 
-  # テキスト入力
-  - name: フィールドに入力
+  # テキスト入力（fill）
+  - name: テキストを入力
     action: fill
-    selector: "input[name='field']"
-    value: "${input.text_value}"
-    hint: "テキスト入力欄"
+    selector: "input[name='search']"
+    value: "${input.keyword}"
+    hint: "検索入力欄"
+
+  # キーボード入力（type）- セレクタ不要、フォーカス位置に入力
+  - name: キーボードで入力
+    action: type
+    value: "${input.keyword}"
+    hint: "ドロップダウン内検索ボックス"
+
+  # キー押下
+  - name: Enterキーを押す
+    action: press
+    selector: "input[name='search']"
+    key: "Enter"
 
   # ドロップダウン選択
   - name: オプションを選択
     action: select
-    selector: "select[name='option']"
-    value: "option_value"
+    selector: "select[name='category']"
+    value: "electronics"
 
-  # スクリーンショット
-  - name: 画面キャプチャ
-    action: screenshot
-    path: "screenshot.png"
-
-  # データ抽出
-  - name: テキスト取得
-    action: extract
-    selector: ".result-text"
-    attribute: textContent    # textContent | href | value | etc.
-    save_as: extracted_value
+  # ファイルアップロード
+  - name: ファイルをアップロード
+    action: file_upload
+    selector: "input[type='file']"
+    file: "${input.image_file}"
 
   # Playwrightコード直接実行（複雑な操作用）
-  # 高速実行モードで browser_run_code に変換される
   - name: 複雑な操作をコードで実行
     action: playwright_code
     code: |
       // Playwright APIを使用した複雑な操作
-      // page オブジェクトが利用可能
+      // page, extract, input, constants が利用可能
       const rows = page.getByRole('row');
       for (let i = 0; i < await rows.count(); i++) {
         const row = rows.nth(i);
         await row.getByLabel('Field').fill('value');
       }
+    output: result_variable
     hint: "テーブルの各行にあるFieldラベルの入力欄"
 
   # 条件付き実行（when）
@@ -121,14 +126,12 @@ steps:
         - field: extract.amount
           op: ">"
           value: 10000
-        - field: input.type
-          op: "=="
-          value: "external"
+        - field: input.count
+          op: ">"
+          value: 0
       match: all              # all（すべて満たす）| any（いずれか満たす）
 
-# 完了確認（オプション）
-verify:
-  - type: url_contains
-    value: "/success"
-  - type: element_visible
-    selector: ".success-message"
+# 出力定義（オプション）
+output:
+  result:
+    description: "実行結果"

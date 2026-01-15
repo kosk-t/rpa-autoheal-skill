@@ -68,7 +68,7 @@ node scripts/yaml-to-js.js workflows/<name>.yaml
 | 繰り返し処理が必要 | playwright_code に変換 |
 | fill で visible 判定失敗 | type アクションに変更 |
 
-→ アクション詳細: `rpa-docs/actions.md`
+**アクション詳細**: `rpa-docs/actions.md`
 
 ---
 
