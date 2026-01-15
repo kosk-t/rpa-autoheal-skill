@@ -1,0 +1,197 @@
+# フォーム入力サンプル
+# DemoQAの学生登録フォームに自動入力するサンプルワークフロー
+
+name: form-input-sample
+description: DemoQAの学生登録フォームに自動入力するサンプル
+
+# 入力パラメータ
+input:
+  first_name:
+    type: string
+    description: "名（First Name）"
+    required: true
+  last_name:
+    type: string
+    description: "姓（Last Name）"
+    required: true
+  email:
+    type: string
+    description: "メールアドレス"
+    required: true
+  mobile:
+    type: string
+    description: "電話番号（10桁）"
+    required: true
+  address:
+    type: string
+    description: "住所"
+    required: false
+  birth_date:
+    type: string
+    description: "生年月日（DD MMM YYYY形式、例: 15 Jan 1990）"
+    required: false
+  subject:
+    type: string
+    description: "科目（例: Maths, English, Computer Science）"
+    required: false
+  state:
+    type: string
+    description: "州（NCR, Uttar Pradesh, Haryana, Rajasthan）"
+    required: false
+  city:
+    type: string
+    description: "都市（州に依存）"
+    required: false
+  picture:
+    type: image
+    description: "プロフィール画像（ファイルパス）"
+    required: false
+
+# 自動化ステップ
+steps:
+  # ページを開く
+  - name: フォームページを開く
+    action: navigate
+    url: https://demoqa.com/automation-practice-form
+
+  # 名を入力
+  - name: 名を入力
+    action: fill
+    selector: "#firstName"
+    value: "${input.first_name}"
+    hint: "First Name入力欄"
+
+  # 姓を入力
+  - name: 姓を入力
+    action: fill
+    selector: "#lastName"
+    value: "${input.last_name}"
+    hint: "Last Name入力欄"
+
+  # メールを入力
+  - name: メールを入力
+    action: fill
+    selector: "#userEmail"
+    value: "${input.email}"
+    hint: "Email入力欄"
+
+  # 性別を選択（Male）
+  - name: 性別を選択
+    action: click
+    selector: "label[for='gender-radio-1']"
+    hint: "Male ラジオボタン"
+
+  # 電話番号を入力
+  - name: 電話番号を入力
+    action: fill
+    selector: "#userNumber"
+    value: "${input.mobile}"
+    hint: "Mobile Number入力欄"
+
+  # 生年月日を入力（日付ピッカー）
+  - name: 生年月日を入力
+    action: playwright_code
+    code: |
+      if (input.birth_date) {
+        await page.locator('#dateOfBirthInput').click();
+        await page.locator('#dateOfBirthInput').fill(input.birth_date);
+        await page.keyboard.press('Escape');
+      }
+    hint: "日付ピッカーに生年月日を入力"
+    when:
+      field: input.birth_date
+      op: "!="
+      value: ""
+
+  # 科目を入力（オートコンプリート）
+  - name: 科目を入力
+    action: playwright_code
+    code: |
+      if (input.subject) {
+        await page.locator('#subjectsInput').fill(input.subject);
+        await page.locator('.subjects-auto-complete__option').first().click();
+      }
+    hint: "Subjects入力欄にオートコンプリートで入力し、候補をクリック"
+    when:
+      field: input.subject
+      op: "!="
+      value: ""
+
+  # 趣味を選択（Sports）
+  - name: 趣味を選択
+    action: click
+    selector: "label[for='hobbies-checkbox-1']"
+    hint: "Sports チェックボックス"
+
+  # 画像をアップロード
+  - name: 画像をアップロード
+    action: playwright_code
+    code: |
+      if (input.picture) {
+        await page.locator('#uploadPicture').setInputFiles(input.picture);
+      }
+    hint: "Picture入力欄にファイルをアップロード"
+    when:
+      field: input.picture
+      op: "!="
+      value: ""
+
+  # 住所を入力（入力がある場合のみ）
+  - name: 住所を入力
+    action: fill
+    selector: "#currentAddress"
+    value: "${input.address}"
+    hint: "Current Address入力欄"
+    when:
+      field: input.address
+      op: "!="
+      value: ""
+
+  # 広告を削除してスクロール
+  - name: 広告削除とスクロール
+    action: playwright_code
+    code: |
+      // 固定広告バナーを削除
+      await page.evaluate(() => {
+        document.querySelectorAll('[id*="fixedban"], .fixedban, [class*="Ad"], #adplus-anchor').forEach(el => el.remove());
+      });
+      await page.locator('#state').scrollIntoViewIfNeeded();
+      await page.waitForTimeout(300);
+    hint: "広告を削除してState/Cityセレクタが見えるようにスクロール"
+
+  # 州を選択（React Select）
+  - name: 州を選択
+    action: playwright_code
+    code: |
+      if (input.state) {
+        await page.locator('#state').click({ force: true });
+        await page.locator('#state [class*="-menu"]').waitFor({ timeout: 3000 });
+        await page.locator('#state').getByText(input.state, { exact: true }).click({ force: true });
+      }
+    hint: "State ドロップダウンから選択"
+    when:
+      field: input.state
+      op: "!="
+      value: ""
+
+  # 都市を選択（React Select）
+  - name: 都市を選択
+    action: playwright_code
+    code: |
+      if (input.city) {
+        await page.locator('#city').click({ force: true });
+        await page.locator('#city [class*="-menu"]').waitFor({ timeout: 3000 });
+        await page.locator('#city').getByText(input.city, { exact: true }).click({ force: true });
+      }
+    hint: "City ドロップダウンから選択"
+    when:
+      field: input.city
+      op: "!="
+      value: ""
+
+  # 送信ボタンをクリック
+  - name: フォームを送信
+    action: playwright_code
+    code: |
+      await page.click('#submit', { force: true });
+    hint: "Submit ボタン"
