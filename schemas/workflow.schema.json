@@ -108,7 +108,7 @@
         },
         "action": {
           "type": "string",
-          "enum": ["navigate", "fill", "click", "press", "wait", "playwright_code"],
+          "enum": ["navigate", "fill", "click", "press", "type", "select", "file_upload", "wait", "playwright_code"],
           "description": "Type of action to perform"
         },
         "hint": {
@@ -134,6 +134,10 @@
         "key": {
           "type": "string",
           "description": "Key to press (for press action)"
+        },
+        "file": {
+          "type": "string",
+          "description": "File path for upload (for file_upload action), supports variable interpolation"
         },
         "timeout": {
           "type": "integer",
@@ -181,6 +185,30 @@
           },
           "then": {
             "required": ["selector", "key"]
+          }
+        },
+        {
+          "if": {
+            "properties": { "action": { "const": "type" } }
+          },
+          "then": {
+            "required": ["value"]
+          }
+        },
+        {
+          "if": {
+            "properties": { "action": { "const": "select" } }
+          },
+          "then": {
+            "required": ["selector", "value"]
+          }
+        },
+        {
+          "if": {
+            "properties": { "action": { "const": "file_upload" } }
+          },
+          "then": {
+            "required": ["selector", "file"]
           }
         },
         {
