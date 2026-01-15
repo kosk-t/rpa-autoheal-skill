@@ -149,15 +149,22 @@ async (page) => {
       name: '広告削除とスクロール',
       action: 'playwright_code',
       execute: async () => {
-        // 固定広告バナーを削除
+        // 固定広告・フッター・オーバーレイを削除
         await page.evaluate(() => {
-          document.querySelectorAll('[id*="fixedban"], .fixedban, [class*="Ad"], #adplus-anchor').forEach(el => el.remove());
+          const selectors = [
+            '[id*="fixedban"]', '.fixedban', '[class*="Ad"]', '#adplus-anchor',
+            'footer', '#footer', '.footer', '[id*="google_ads"]',
+            '[style*="position: fixed"]', '[style*="position:fixed"]'
+          ];
+          selectors.forEach(sel => {
+            document.querySelectorAll(sel).forEach(el => el.remove());
+          });
         });
         await page.locator('#state').scrollIntoViewIfNeeded();
         await page.waitForTimeout(300);
         
       },
-      hint: '広告を削除してState/Cityセレクタが見えるようにスクロール'
+      hint: '広告・フッターを削除してState/Cityセレクタが見えるようにスクロール'
     },
 
     // Step 12: 州を選択
