@@ -1,6 +1,9 @@
 # Browser Automation Skill
 
 **AIで作って、高速・毎回確実に動作。失敗してもその場でAIがリカバリ、学習して次回から自動で改善**
+![cover](documents\images\image-0.jpg)
+![concept-1](documents\images\image-1.jpg)
+![concept-2](documents\images\image-2.jpg)
 
 ## 特徴
 
@@ -17,10 +20,13 @@ YAML定義 → Playwrightコード生成 → 直接実行（AI推論なし・高
 ```
 
 - **誰でも作れる**: 自然言語で指示しながらブラウザを操作、対話的にワークフローを生成
+![make](documents\images\image-3.jpg)
 - **高速**: YAMLから生成したコードを直接実行。毎回AIが判断するエージェントより圧倒的に速い
 - **確実**: 同じYAMLなら同じ動作。結果がブレない
 - **その場でリカバリ**: 失敗してもAIが状況を見て回復、業務を完了させる
+![execute](documents\images\image-4.jpg)
 - **自己改善**: 失敗パターンを学習してYAMLを修正。同じ失敗は二度としない
+![learn](documents\images\image-5.jpg)
 
 ## セットアップ
 
