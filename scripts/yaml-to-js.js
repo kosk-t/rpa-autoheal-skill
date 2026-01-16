@@ -373,6 +373,19 @@ function convertYamlToJs(workflow) {
   if (workflow.description) {
     lines.push(`// ${workflow.description}`);
   }
+  lines.push('//');
+  lines.push('// ============================================================');
+  lines.push('// AI EXECUTION POLICY (この指示に必ず従うこと)');
+  lines.push('// ============================================================');
+  lines.push('// 1. このコードを browser_run_code で一括実行する');
+  lines.push('// 2. 失敗時 (failedStep != null):');
+  lines.push('//    a. browser_snapshot で現在の状態を確認');
+  lines.push('//    b. MCP (browser_click等) で失敗したステップのみを実行');
+  lines.push('//    c. 成功したら startFromStep = failedStep.index + 1 で');
+  lines.push('//       このコードを再度 browser_run_code で実行（残りを継続）');
+  lines.push('// 3. 重要: MCPフォールバック後は必ずスクリプト実行に戻る');
+  lines.push('//    MCPで1ステップずつ進めるのは禁止（トークン浪費）');
+  lines.push('// ============================================================');
   lines.push('');
 
   // Start async function
@@ -409,6 +422,7 @@ function convertYamlToJs(workflow) {
   lines.push('      }');
   lines.push('    } catch (error) {');
   lines.push('      results.success = false;');
+  lines.push('      // フォールバック情報: MCPで対処後 startFromStep = index + 1 で再実行');
   lines.push('      results.failedStep = {');
   lines.push('        index: i,');
   lines.push('        name: step.name,');

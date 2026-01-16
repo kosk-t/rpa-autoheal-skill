@@ -1,6 +1,19 @@
 // amazon-product-search - Auto-generated template
 // Generated from: workflows/amazon-product-search.yaml
 // Amazonで商品を検索し、価格・評価情報を取得
+//
+// ============================================================
+// AI EXECUTION POLICY (この指示に必ず従うこと)
+// ============================================================
+// 1. このコードを browser_run_code で一括実行する
+// 2. 失敗時 (failedStep != null):
+//    a. browser_snapshot で現在の状態を確認
+//    b. MCP (browser_click等) で失敗したステップのみを実行
+//    c. 成功したら startFromStep = failedStep.index + 1 で
+//       このコードを再度 browser_run_code で実行（残りを継続）
+// 3. 重要: MCPフォールバック後は必ずスクリプト実行に戻る
+//    MCPで1ステップずつ進めるのは禁止（トークン浪費）
+// ============================================================
 
 async (page) => {
   const inputData = __INPUT_DATA__;
@@ -101,6 +114,7 @@ async (page) => {
       }
     } catch (error) {
       results.success = false;
+      // フォールバック情報: MCPで対処後 startFromStep = index + 1 で再実行
       results.failedStep = {
         index: i,
         name: step.name,

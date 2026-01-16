@@ -56,8 +56,13 @@ YAMLからPlaywrightコードを生成し、`browser_run_code` で一括実行�
 2. `workflows/<name>.yaml` の `input:` セクションを読んで入力項目を確認
    - 必須項目（`required: true`）と任意項目を把握
    - 型（`type`）と説明（`description`）を確認
-3. 入力データを準備（ユーザー指定、OCR抽出等）
-4. 各入力ファイルに対してTaskで実行を起動（1件ずつ）
+3. **入力ファイルをプロジェクト内にコピー**（Playwright許可ディレクトリ対策）
+   ```bash
+   mkdir -p input && cp "<ユーザー指定パス>" input/
+   ```
+   - コピー後のパス (`input/<filename>`) を `{{current_item}}` で使用
+4. 入力データを準備（ユーザー指定、OCR抽出等）
+5. 各入力ファイルに対してTaskで実行を起動（1件ずつ）
 
 ### フェーズ2: 実行（1件ごとにTask）
 
@@ -94,12 +99,33 @@ Task(
     ## 現在のファイル
     __CURRENT_FILE__ = "<ファイルパス>"
 
-    ## 完了後
-    結果を報告（成功/失敗、フォールバックの有無）
+    ## 完了後の報告形式
+    以下のJSON形式で報告すること:
+    \`\`\`json
+    {
+      "success": true/false,
+      "completedSteps": 5,
+      "fallbacks": [
+        {
+          "stepIndex": 3,
+          "stepName": "保存ボタンをクリック",
+          "originalSelector": "#save-btn",
+          "error": "Timeout waiting for selector",
+          "resolution": {
+            "method": "browser_click",
+            "ref": "B42",
+            "element": "青い保存ボタン"
+          },
+          "suggestedFix": "セレクタを [data-action='save'] に変更"
+        }
+      ]
+    }
+    \`\`\`
+    - fallbacks 配列: フォールバックが発生しなければ空配列 []
+    - suggestedFix: YAML改善案（セレクタ変更、wait追加等）
 
     ## 重要: コンテキスト節約
     - browser_run_codeの結果にはconsoleログやsnapshotが含まれるが、これらは無視してよい
-    - 報告は必要最小限に: 成功/失敗、完了ステップ数、フォールバック詳細のみ
     - consoleのエラー/警告は報告不要（広告やトラッキング由来のノイズが多い）
   `
 )
@@ -109,11 +135,31 @@ Task(
 
 ### フェーズ3: 改善レポート（メインコンテキスト）
 
-全件完了後、メインコンテキストで改善レポートを作成:
-- `improvements/<workflow名>/YYYY-MM-DD.md` に保存
-- フォールバックが発生した場合は原因・対処・改善案を記録
+全件完了後、サブエージェントから返された `fallbacks` 配列を集約して改善レポートを作成:
 
-**失敗時:** MCPフォールバック → `startFromStep` で再開 → 改善レポートにフォールバック内容を記録
+```
+// サブエージェントからの結果例
+{
+  "success": true,
+  "completedSteps": 5,
+  "fallbacks": [
+    {
+      "stepIndex": 3,
+      "stepName": "保存ボタンをクリック",
+      "originalSelector": "#save-btn",
+      "error": "Timeout",
+      "resolution": { "method": "browser_click", "ref": "B42" },
+      "suggestedFix": "セレクタを [data-action='save'] に変更"
+    }
+  ]
+}
+```
+
+**改善レポート作成:**
+1. `fallbacks` が空 → レポート作成不要（完全成功）
+2. `fallbacks` がある → `improvements/<workflow名>/YYYY-MM-DD.md` に出力
+   - 各フォールバックの `suggestedFix` を改善提案として記載
+   - 原因カテゴリを判定（YAML / SKILL / 実装）
 
 ---
 
