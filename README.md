@@ -45,6 +45,7 @@ npm install
 ```
 「https://example.com のワークフローを探索モードで作成して」
 「ワークフローを作成して」
+「/rpa-explore https://example.com のフォーム入力を自動化して」
 ```
 
 ### ワークフローを実行する
@@ -54,6 +55,7 @@ npm install
 ```
 「sample-expense を実行して。領収書は receipt.jpg」
 「amazon-search を実行」
+「/rpa-execute sample-expense」
 ```
 
 ### ワークフローを改善する
