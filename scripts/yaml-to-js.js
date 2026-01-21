@@ -391,7 +391,10 @@ function convertYamlToJs(workflow) {
   // Start async function
   lines.push('async (page) => {');
   lines.push('  const inputData = __INPUT_DATA__;');
-  lines.push('  const { extract = {}, constants = {}, input = {}, startFromStep = 0 } = inputData;');
+  lines.push('  const { extract = {}, input = {}, startFromStep = 0 } = inputData;');
+  lines.push('');
+  // Embed constants directly from YAML (not passed at runtime)
+  lines.push(`  const constants = ${JSON.stringify(workflow.constants || {})};`);
   lines.push('');
 
   // Generate steps array
@@ -407,14 +410,38 @@ function convertYamlToJs(workflow) {
   lines.push('  ];');
   lines.push('');
 
-  // Results object and execution loop
+  // Retry helper function
+  lines.push('  const MAX_RETRIES = 3;');
+  lines.push('  const RETRY_DELAY = 1000;');
+  lines.push('');
+  lines.push('  async function executeWithRetry(step, stepIndex) {');
+  lines.push('    let lastError;');
+  lines.push('    for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {');
+  lines.push('      try {');
+  lines.push('        if (attempt > 1) {');
+  lines.push('          console.log(`Step ${stepIndex}: ${step.name} - Retry ${attempt}/${MAX_RETRIES}...`);');
+  lines.push('          await new Promise(r => setTimeout(r, RETRY_DELAY));');
+  lines.push('        } else {');
+  lines.push('          console.log(`Step ${stepIndex}: ${step.name}...`);');
+  lines.push('        }');
+  lines.push('        return await step.execute();');
+  lines.push('      } catch (error) {');
+  lines.push('        lastError = error;');
+  lines.push('        console.log(`Step ${stepIndex}: ${step.name} - Attempt ${attempt} failed: ${error.message}`);');
+  lines.push('        if (attempt === MAX_RETRIES) {');
+  lines.push('          throw lastError;');
+  lines.push('        }');
+  lines.push('      }');
+  lines.push('    }');
+  lines.push('  }');
+  lines.push('');
+  lines.push('  // Results object and execution loop');
   lines.push('  const results = { success: true, completedSteps: [], failedStep: null, output: {} };');
   lines.push('');
   lines.push('  for (let i = startFromStep; i < steps.length; i++) {');
   lines.push('    const step = steps[i];');
   lines.push('    try {');
-  lines.push('      console.log(`Step ${i}: ${step.name}...`);');
-  lines.push('      const stepResult = await step.execute();');
+  lines.push('      const stepResult = await executeWithRetry(step, i);');
   lines.push('      results.completedSteps.push({ index: i, name: step.name, success: true });');
   lines.push('');
   lines.push('      if (step.output && stepResult !== undefined) {');
@@ -428,7 +455,8 @@ function convertYamlToJs(workflow) {
   lines.push('        name: step.name,');
   lines.push('        selector: step.selector,');
   lines.push('        hint: step.hint,');
-  lines.push('        error: error.message');
+  lines.push('        error: error.message,');
+  lines.push('        retriesExhausted: true');
   lines.push('      };');
   lines.push('      break;');
   lines.push('    }');

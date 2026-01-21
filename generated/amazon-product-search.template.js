@@ -17,7 +17,9 @@
 
 async (page) => {
   const inputData = __INPUT_DATA__;
-  const { extract = {}, constants = {}, input = {}, startFromStep = 0 } = inputData;
+  const { extract = {}, input = {}, startFromStep = 0 } = inputData;
+
+  const constants = {"max_results":3};
 
   const steps = [
     // Step 0: Amazonにアクセス
@@ -100,13 +102,37 @@ async (page) => {
 
   ];
 
+  const MAX_RETRIES = 3;
+  const RETRY_DELAY = 1000;
+
+  async function executeWithRetry(step, stepIndex) {
+    let lastError;
+    for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+      try {
+        if (attempt > 1) {
+          console.log(`Step ${stepIndex}: ${step.name} - Retry ${attempt}/${MAX_RETRIES}...`);
+          await new Promise(r => setTimeout(r, RETRY_DELAY));
+        } else {
+          console.log(`Step ${stepIndex}: ${step.name}...`);
+        }
+        return await step.execute();
+      } catch (error) {
+        lastError = error;
+        console.log(`Step ${stepIndex}: ${step.name} - Attempt ${attempt} failed: ${error.message}`);
+        if (attempt === MAX_RETRIES) {
+          throw lastError;
+        }
+      }
+    }
+  }
+
+  // Results object and execution loop
   const results = { success: true, completedSteps: [], failedStep: null, output: {} };
 
   for (let i = startFromStep; i < steps.length; i++) {
     const step = steps[i];
     try {
-      console.log(`Step ${i}: ${step.name}...`);
-      const stepResult = await step.execute();
+      const stepResult = await executeWithRetry(step, i);
       results.completedSteps.push({ index: i, name: step.name, success: true });
 
       if (step.output && stepResult !== undefined) {
@@ -120,7 +146,8 @@ async (page) => {
         name: step.name,
         selector: step.selector,
         hint: step.hint,
-        error: error.message
+        error: error.message,
+        retriesExhausted: true
       };
       break;
     }

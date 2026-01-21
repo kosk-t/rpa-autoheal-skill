@@ -91,10 +91,15 @@ Task(
     \`\`\`json
     {
       "extract": { ... },
-      "constants": { ... },
+      "input": { ... },
       "startFromStep": 0
     }
     \`\`\`
+
+    **重要: constants は渡さない**
+    - extract: 領収書等から抽出した値
+    - input: YAMLのinputセクションで定義された値（デフォルト値含む）
+    - constants: JSテンプレートに埋め込み済みなので渡さない
 
     ## 現在のファイル
     __CURRENT_FILE__ = "<ファイルパス>"
