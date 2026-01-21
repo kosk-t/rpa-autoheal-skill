@@ -1,10 +1,25 @@
 // form-input-sample - Auto-generated template
 // Generated from: workflows/form-input-sample.yaml
 // DemoQAの学生登録フォームに自動入力するサンプル
+//
+// ============================================================
+// AI EXECUTION POLICY (この指示に必ず従うこと)
+// ============================================================
+// 1. このコードを browser_run_code で一括実行する
+// 2. 失敗時 (failedStep != null):
+//    a. browser_snapshot で現在の状態を確認
+//    b. MCP (browser_click等) で失敗したステップのみを実行
+//    c. 成功したら startFromStep = failedStep.index + 1 で
+//       このコードを再度 browser_run_code で実行（残りを継続）
+// 3. 重要: MCPフォールバック後は必ずスクリプト実行に戻る
+//    MCPで1ステップずつ進めるのは禁止（トークン浪費）
+// ============================================================
 
 async (page) => {
   const inputData = __INPUT_DATA__;
-  const { extract = {}, constants = {}, input = {}, startFromStep = 0 } = inputData;
+  const { extract = {}, input = {}, startFromStep = 0 } = inputData;
+
+  const constants = {};
 
   const steps = [
     // Step 0: フォームページを開く
@@ -214,13 +229,37 @@ async (page) => {
 
   ];
 
+  const MAX_RETRIES = 3;
+  const RETRY_DELAY = 1000;
+
+  async function executeWithRetry(step, stepIndex) {
+    let lastError;
+    for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+      try {
+        if (attempt > 1) {
+          console.log(`Step ${stepIndex}: ${step.name} - Retry ${attempt}/${MAX_RETRIES}...`);
+          await new Promise(r => setTimeout(r, RETRY_DELAY));
+        } else {
+          console.log(`Step ${stepIndex}: ${step.name}...`);
+        }
+        return await step.execute();
+      } catch (error) {
+        lastError = error;
+        console.log(`Step ${stepIndex}: ${step.name} - Attempt ${attempt} failed: ${error.message}`);
+        if (attempt === MAX_RETRIES) {
+          throw lastError;
+        }
+      }
+    }
+  }
+
+  // Results object and execution loop
   const results = { success: true, completedSteps: [], failedStep: null, output: {} };
 
   for (let i = startFromStep; i < steps.length; i++) {
     const step = steps[i];
     try {
-      console.log(`Step ${i}: ${step.name}...`);
-      const stepResult = await step.execute();
+      const stepResult = await executeWithRetry(step, i);
       results.completedSteps.push({ index: i, name: step.name, success: true });
 
       if (step.output && stepResult !== undefined) {
@@ -228,12 +267,14 @@ async (page) => {
       }
     } catch (error) {
       results.success = false;
+      // フォールバック情報: MCPで対処後 startFromStep = index + 1 で再実行
       results.failedStep = {
         index: i,
         name: step.name,
         selector: step.selector,
         hint: step.hint,
-        error: error.message
+        error: error.message,
+        retriesExhausted: true
       };
       break;
     }
