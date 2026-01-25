@@ -5,26 +5,26 @@ description: "ブラウザ自動化スキル。「ワークフローを実行」
 
 # RPA 実行モード
 
-YAMLからPlaywrightコードを生成し、`browser_run_code` で一括実行する。
+YAMLからPlaywrightコードを生成し、`playwright-cli run-code` で一括実行する。
 
 ---
 
-## 重要: 実行はTaskに委譲する
+## 重要: playwright-cli を使用する
 
-**メインコンテキストで `browser_run_code` を直接実行しないこと。**
+**MCPツールではなく、Bash経由で `playwright-cli` コマンドを使用する。**
+- 約4倍高速（MCP経由のオーバーヘッドがない）
+- 同じフォールバック機能が使える
 
 ```
-メインコンテキスト          Task (general-purpose)
+メインコンテキスト
 ─────────────────────────────────────────────────
 1. JS存在確認
 2. YAMLのinput:セクションで入力項目確認
 3. 入力データ準備（OCR等）
-4. Taskを起動 ──────────→ 5. template.jsをRead
-                          6. __INPUT_DATA__を置換
-                          7. browser_run_code実行
-                          8. 結果を返す
-←─────────────────────────
-9. 改善レポート作成
+4. playwright-cli open <url> --headed でブラウザ起動
+5. playwright-cli run-code でテンプレート実行
+6. 失敗時 → playwright-cli snapshot → フォールバック
+7. 結果を報告、改善レポート作成
 ```
 
 **YAMLの読み方:**
@@ -37,9 +37,9 @@ YAMLからPlaywrightコードを生成し、`browser_run_code` で一括実行�
 
 | 項目 | 実行モード |
 |------|----------|
-| 実行方式 | Playwrightコード一括実行 |
-| スナップショット | 基本不要（失敗時のみMCPで取得） |
-| フォールバック | 失敗ステップのみMCP補助 → 途中再開 |
+| 実行方式 | `playwright-cli run-code` 一括実行 |
+| スナップショット | 基本不要（失敗時のみ `playwright-cli snapshot`） |
+| フォールバック | 失敗ステップのみ CLI 補助 → 途中再開 |
 | トークン消費 | 最小限 |
 | JSテンプレート | `/rpa-explore` で事前生成 |
 
@@ -47,7 +47,7 @@ YAMLからPlaywrightコードを生成し、`browser_run_code` で一括実行�
 
 ## 実行フロー
 
-### フェーズ1: 準備（メインコンテキスト）
+### フェーズ1: 準備
 
 **JSテンプレートは `/rpa-explore` で生成済みが前提。**
 
@@ -60,110 +60,59 @@ YAMLからPlaywrightコードを生成し、`browser_run_code` で一括実行�
    ```bash
    mkdir -p input && cp "<ユーザー指定パス>" input/
    ```
-   - コピー後のパス (`input/<filename>`) を `{{current_item}}` で使用
 4. 入力データを準備（ユーザー指定、OCR抽出等）
-5. 各入力ファイルに対してTaskで実行を起動（1件ずつ）
 
-### フェーズ2: 実行（1件ごとにTask）
+### フェーズ2: 実行
 
-**repeat: true の場合、各ファイルに対して個別にTaskを起動する。**
+**playwright-cli コマンドで直接実行する。**
 
-```
-// 1件目
-Task(
-  subagent_type: "general-purpose",
-  description: "<workflow名> - 実行 (1/N)",
-  prompt: `
-    ## タスク: <workflow名> 実行
+```bash
+# 1. テンプレートを読み込み、入力データを埋め込んでコード文字列を作成
+# 2. playwright-cli で実行
 
-    ## 実行手順（生成済みテンプレート使用）
-    1. generated/<workflow>.template.js を Read で読み込む
-    2. __INPUT_DATA__ と __CURRENT_FILE__ を置換してコードを構築
-    3. browser_run_code で実行
-    4. 失敗時のフォールバック手順:
-       a. failedStep の情報（セレクタ、hint）を確認
-       b. browser_snapshot で状態確認
-       c. MCP（browser_click等）で失敗したステップのみ実行
-       d. startFromStep = failedStep + 1 で browser_run_code を再実行（残りのステップを継続）
-       e. 再度失敗したら a に戻る
+# ページを開く（--headed でブラウザ表示）
+playwright-cli open "<開始URL>" --headed
 
-    ## 入力データ
-    \`\`\`json
-    {
-      "extract": { ... },
-      "input": { ... },
-      "startFromStep": 0
-    }
-    \`\`\`
-
-    **重要: constants は渡さない**
-    - extract: 領収書等から抽出した値
-    - input: YAMLのinputセクションで定義された値（デフォルト値含む）
-    - constants: JSテンプレートに埋め込み済みなので渡さない
-
-    ## 現在のファイル
-    __CURRENT_FILE__ = "<ファイルパス>"
-
-    ## 完了後の報告形式
-    以下のJSON形式で報告すること:
-    \`\`\`json
-    {
-      "success": true/false,
-      "completedSteps": 5,
-      "fallbacks": [
-        {
-          "stepIndex": 3,
-          "stepName": "保存ボタンをクリック",
-          "originalSelector": "#save-btn",
-          "error": "Timeout waiting for selector",
-          "resolution": {
-            "method": "browser_click",
-            "ref": "B42",
-            "element": "青い保存ボタン"
-          },
-          "suggestedFix": "セレクタを [data-action='save'] に変更"
-        }
-      ]
-    }
-    \`\`\`
-    - fallbacks 配列: フォールバックが発生しなければ空配列 []
-    - suggestedFix: YAML改善案（セレクタ変更、wait追加等）
-
-    ## 重要: コンテキスト節約
-    - browser_run_codeの結果にはconsoleログやsnapshotが含まれるが、これらは無視してよい
-    - consoleのエラー/警告は報告不要（広告やトラッキング由来のノイズが多い）
-  `
-)
-
-// 2件目以降も同様に個別Task
+# コードを実行（関数形式で渡す）
+playwright-cli run-code "async (page) => { ... }"
 ```
 
-### フェーズ3: 改善レポート（メインコンテキスト）
-
-全件完了後、サブエージェントから返された `fallbacks` 配列を集約して改善レポートを作成:
-
+**コード実行の形式:**
+```bash
+playwright-cli run-code "async (page) => {
+  const inputData = { extract: {}, input: { first_name: 'Taro' }, startFromStep: 0 };
+  // ... テンプレートの中身 ...
+  return results;
+}"
 ```
-// サブエージェントからの結果例
+
+**失敗時のフォールバック手順:**
+1. 結果の `failedStep` を確認（セレクタ、hint、エラー）
+2. `playwright-cli snapshot` で現在の状態を取得
+3. `playwright-cli click <ref>` / `fill <ref> <text>` で失敗ステップを実行
+4. `startFromStep` を更新して `run-code` を再実行
+
+### フェーズ3: 改善レポート
+
+実行完了後、フォールバックが発生した場合は改善レポートを作成:
+
+```json
+// 実行結果の例
 {
   "success": true,
-  "completedSteps": 5,
-  "fallbacks": [
-    {
-      "stepIndex": 3,
-      "stepName": "保存ボタンをクリック",
-      "originalSelector": "#save-btn",
-      "error": "Timeout",
-      "resolution": { "method": "browser_click", "ref": "B42" },
-      "suggestedFix": "セレクタを [data-action='save'] に変更"
-    }
-  ]
+  "completedSteps": ["step1: OK", "step2: OK"],
+  "failedStep": {
+    "step": "saveButton",
+    "error": "Timeout 3000ms exceeded",
+    "selector": "#save-btn"
+  }
 }
 ```
 
 **改善レポート作成:**
-1. `fallbacks` が空 → レポート作成不要（完全成功）
-2. `fallbacks` がある → `improvements/<workflow名>/YYYY-MM-DD.md` に出力
-   - 各フォールバックの `suggestedFix` を改善提案として記載
+1. `failedStep` がない → レポート作成不要（完全成功）
+2. `failedStep` がある → `improvements/<workflow名>/YYYY-MM-DD.md` に出力
+   - フォールバック内容と改善提案を記載
    - 原因カテゴリを判定（YAML / SKILL / 実装）
 
 ---
@@ -180,28 +129,35 @@ Task(
 
 ---
 
-## MCPフォールバック
+## フォールバック
 
-基本は全ステップを一括実行し、失敗したステップのみMCPで補助。
+基本は全ステップを一括実行し、失敗したステップのみ CLI で補助。
 
 ```
-browser_run_code (全ステップ試行)
+playwright-cli run-code (全ステップ試行)
   ✅ Step 0-2: 成功
   ❌ Step 3: タイムアウト
-  return { failedStep: 3, selector: '...' }
+  return { failedStep: { index: 3, selector: '...', hint: '...' } }
         ↓
-MCP補助 (失敗ステップのみ)
-  browser_snapshot → browser_click
+CLI補助 (失敗ステップのみ)
+  playwright-cli snapshot → playwright-cli click <ref>
         ↓
-browser_run_code (startFromStep: 4 で再開)
+playwright-cli run-code (startFromStep: 4 で再開)
   ✅ Step 4-7: 成功
 ```
 
 **フォールバック手順:**
-1. `failedStep`、`selector`、`hint` を確認
-2. `browser_snapshot` で状態確認
-3. MCP (`browser_click` 等) で操作（`hint` を参考に要素を特定）
-4. `startFromStep` を設定して再実行
+```bash
+# 1. スナップショット取得
+playwright-cli snapshot
+
+# 2. スナップショットから ref を特定し操作
+playwright-cli click <ref>
+playwright-cli fill <ref> "入力値"
+
+# 3. startFromStep を更新して再開
+playwright-cli run-code "async (page) => { ... startFromStep: 4 ... }"
+```
 
 **hint フィールド:**
 YAMLの各ステップに `hint` を記載すると、フォールバック時にAIがスナップショットから要素を特定する手がかりになる。
@@ -339,9 +295,37 @@ SKILL修正不要
 
 1. generated/myte-expense.template.js の存在確認
 2. 入力データ抽出（OCR等）
-3. browser_run_code で実行
-4. 失敗時 → MCPフォールバック → startFromStep で再開
-5. 結果を報告、改善レポート出力
+3. playwright-cli open <url> --headed でブラウザ起動
+4. playwright-cli run-code でテンプレート実行
+5. 失敗時 → playwright-cli snapshot → CLIフォールバック → startFromStep で再開
+6. 結果を報告、改善レポート出力
+```
+
+### コマンド例
+
+```bash
+# セッションをクリーンにして開始
+playwright-cli session-stop-all 2>/dev/null
+
+# ページを開く（ヘッドフル）
+playwright-cli open "https://example.com" --headed
+
+# コードを実行
+playwright-cli run-code "async (page) => {
+  const input = { first_name: 'Taro', last_name: 'Yamada' };
+  await page.fill('#firstName', input.first_name);
+  await page.fill('#lastName', input.last_name);
+  return { success: true };
+}"
+
+# スナップショット取得（フォールバック時）
+playwright-cli snapshot
+
+# 要素をクリック（ref はスナップショットから取得）
+playwright-cli click e42
+
+# テキスト入力
+playwright-cli fill e50 "入力テキスト"
 ```
 
 ---

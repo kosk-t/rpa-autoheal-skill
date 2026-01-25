@@ -1,21 +1,25 @@
 # セレクタ取得ガイド
 
-高速実行（`browser_run_code`）で使えるCSSセレクタを取得する。
+高速実行（`playwright-cli run-code`）で使えるCSSセレクタを取得する。
 
 ---
 
 ## 取得手順
 
-1. `browser_snapshot` で要素を特定（ref番号を取得）
-2. `browser_evaluate` でDOMからCSSセレクタを取得
+1. `playwright-cli snapshot` で要素を特定（ref番号を取得）
+2. `playwright-cli eval` でDOMからCSSセレクタを取得
 
 ---
 
 ## 単一要素のセレクタ取得
 
+```bash
+# playwright-cli eval で ref を指定して実際のセレクタを取得
+playwright-cli eval "(element) => { ... }" e45
+```
+
 ```javascript
-// browser_evaluate で ref を指定して実際のセレクタを取得
-// パラメータ: ref="e45", element="Expense dropdown"
+// 関数の中身
 (element) => {
   // IDがあればそれを使用（スペースや特殊文字がある場合は属性形式）
   if (element.id) {
@@ -54,8 +58,13 @@
 
 探索効率化のため、複数要素のセレクタを一度に取得：
 
+```bash
+# playwright-cli eval（ref指定なし、ページ全体で実行）
+playwright-cli eval "() => { ... }"
+```
+
 ```javascript
-// browser_evaluate（ref指定なし、ページ全体で実行）
+// 関数の中身
 () => {
   const getSelector = (el) => {
     if (el.id) {
@@ -85,7 +94,7 @@
 
 ## セレクタ形式（優先順位）
 
-高速実行（`browser_run_code`）で動作する形式のみ使用：
+高速実行（`playwright-cli run-code`）で動作する形式のみ使用：
 
 1. `#element-id` - ID（最も安定）
 2. `[id='element id']` - スペースや特殊文字を含むID
@@ -99,7 +108,7 @@
 
 ## ドロップダウン選択
 
-`:has-text()` を使用（Playwright拡張、`browser_run_code`で動作）：
+`:has-text()` を使用（Playwright拡張、`run-code`で動作）：
 
 ```yaml
 - action: click
@@ -113,7 +122,7 @@
 
 ## 使用禁止（高速実行で動作しない）
 
-以下はPlaywright MCP専用のアクセシビリティロールで、`browser_run_code` では動作しない：
+以下はPlaywright MCP専用のアクセシビリティロールで、`run-code` では動作しない：
 
 ```yaml
 # NG - MCP専用形式

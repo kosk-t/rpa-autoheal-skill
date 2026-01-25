@@ -4,3 +4,4 @@ improvements/
 node_modules/
 package-lock.json
 input/
+.playwright-cli/

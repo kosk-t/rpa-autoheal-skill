@@ -7,6 +7,8 @@ description: "ブラウザ自動化の探索モード。「探索モードで構
 
 対話的にブラウザを操作しながら、ワークフローYAMLを構築・改善する。
 
+**playwright-cli を使用する（MCPツールではなくBash経由）。**
+
 ---
 
 ## フロー
@@ -21,8 +23,8 @@ description: "ブラウザ自動化の探索モード。「探索モードで構
 
 ### 手順
 
-1. `browser_navigate` でURLにアクセス
-2. `browser_snapshot` でページ構造を取得
+1. `playwright-cli open <url> --headed` でURLにアクセス
+2. `playwright-cli snapshot` でページ構造を取得
 3. ユーザー指示に従い操作を実行、ステップを記録
 4. 完了キーワード（「ここまで」「保存」等）でYAML出力
 5. **即座に `node scripts/yaml-to-js.js` でスキーマチェック + JS生成**
@@ -76,10 +78,20 @@ node scripts/yaml-to-js.js workflows/<name>.yaml
 
 **重要: 高速実行で使えるCSSセレクタを取得する。**
 
-1. `browser_snapshot` で要素を特定（ref番号）
-2. `browser_evaluate` でDOMからセレクタ取得
+1. `playwright-cli snapshot` で要素を特定（ref番号）
+2. `playwright-cli eval` でDOMからセレクタ取得
 
 → 詳細・コード例: `references/selectors.md`
+
+### コマンド例
+
+```bash
+# スナップショット取得
+playwright-cli snapshot
+
+# 要素からセレクタを取得（ref を指定）
+playwright-cli eval "el => el.id ? '#' + el.id : el.getAttribute('data-testid')" e42
+```
 
 ### セレクタ優先順位
 
@@ -90,7 +102,7 @@ node scripts/yaml-to-js.js workflows/<name>.yaml
 
 ### 使用禁止
 
-MCP専用のアクセシビリティロール（`browser_run_code` で動作しない）：
+MCP専用のアクセシビリティロール（`run-code` で動作しない）：
 ```
 combobox[name='...'], textbox[name='...'], gridcell:has-text('...')
 ```

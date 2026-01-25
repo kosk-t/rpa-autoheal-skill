@@ -12,7 +12,7 @@
 
 ## 使用禁止
 
-MCP専用のアクセシビリティロール（`browser_run_code` で動作しない）：
+MCP専用のアクセシビリティロール（`run-code` で動作しない）：
 
 ```
 combobox[name='...']

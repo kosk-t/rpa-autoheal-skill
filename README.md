@@ -30,13 +30,20 @@ YAML定義 → Playwrightコード生成 → 直接実行（AI推論なし・高
 
 ## セットアップ
 
-### 1. Playwright MCP サーバーの追加
+### 1. Playwright MCP のインストール
 
 ```bash
-claude mcp add playwright npx @playwright/mcp@latest
+npm install -g @playwright/mcp@latest
 ```
 
-### 2. 依存関係のインストール
+### 2. playwright-cli プラグインの追加（このプロジェクトのみ）
+
+```bash
+claude plugin marketplace add microsoft/playwright-cli
+claude plugin install playwright-cli --scope project
+```
+
+### 3. 依存関係のインストール
 
 ```bash
 npm install
