@@ -112,12 +112,15 @@ function escapeTemplateString(str) {
 
 /**
  * Format a value for JS code output
+ * Uses JSON.stringify for strings to avoid Bash escaping issues with single quotes
  * @param {any} value - Value to format
  * @returns {string} Formatted JS value
  */
 function formatJsValue(value) {
   if (typeof value === 'string') {
-    return `'${escapeString(value)}'`;
+    // Use JSON.stringify to produce double-quoted strings
+    // This avoids Bash escaping issues when running via $(cat file.js)
+    return JSON.stringify(value);
   }
 
   if (typeof value === 'boolean' || typeof value === 'number') {
@@ -137,9 +140,9 @@ function convertInterpolation(str) {
   const VARIABLE_PATTERN = /\$\{(extract|input|constants)\.[a-zA-Z_][a-zA-Z0-9_]*\}/;
   const FULL_VARIABLE_PATTERN = /^\$\{(extract|input|constants)\.[a-zA-Z_][a-zA-Z0-9_]*\}$/;
 
-  // No interpolation - return as plain string
+  // No interpolation - return as plain string (use JSON.stringify for double quotes)
   if (!VARIABLE_PATTERN.test(str)) {
-    return `'${escapeString(str)}'`;
+    return JSON.stringify(str);
   }
 
   // Single variable reference - return variable directly without template literal

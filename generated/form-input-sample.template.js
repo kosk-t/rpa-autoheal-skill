@@ -24,75 +24,75 @@ async (page) => {
   const steps = [
     // Step 0: フォームページを開く
     {
-      name: 'フォームページを開く',
-      action: 'navigate',
+      name: "フォームページを開く",
+      action: "navigate",
       execute: async () => {
-        await page.goto('https://demoqa.com/automation-practice-form');
+        await page.goto("https://demoqa.com/automation-practice-form");
         await page.waitForLoadState('domcontentloaded');
       },
     },
 
     // Step 1: 名を入力
     {
-      name: '名を入力',
-      action: 'fill',
-      selector: '#firstName',
+      name: "名を入力",
+      action: "fill",
+      selector: "#firstName",
       execute: async () => {
-        await page.fill('#firstName', input.first_name);
+        await page.fill("#firstName", input.first_name);
       },
-      hint: 'First Name入力欄'
+      hint: "First Name入力欄"
     },
 
     // Step 2: 姓を入力
     {
-      name: '姓を入力',
-      action: 'fill',
-      selector: '#lastName',
+      name: "姓を入力",
+      action: "fill",
+      selector: "#lastName",
       execute: async () => {
-        await page.fill('#lastName', input.last_name);
+        await page.fill("#lastName", input.last_name);
       },
-      hint: 'Last Name入力欄'
+      hint: "Last Name入力欄"
     },
 
     // Step 3: メールを入力
     {
-      name: 'メールを入力',
-      action: 'fill',
-      selector: '#userEmail',
+      name: "メールを入力",
+      action: "fill",
+      selector: "#userEmail",
       execute: async () => {
-        await page.fill('#userEmail', input.email);
+        await page.fill("#userEmail", input.email);
       },
-      hint: 'Email入力欄'
+      hint: "Email入力欄"
     },
 
     // Step 4: 性別を選択
     {
-      name: '性別を選択',
-      action: 'click',
-      selector: 'label[for=\'gender-radio-1\']',
+      name: "性別を選択",
+      action: "click",
+      selector: "label[for='gender-radio-1']",
       execute: async () => {
-        await page.click('label[for=\'gender-radio-1\']');
+        await page.click("label[for='gender-radio-1']");
       },
-      hint: 'Male ラジオボタン'
+      hint: "Male ラジオボタン"
     },
 
     // Step 5: 電話番号を入力
     {
-      name: '電話番号を入力',
-      action: 'fill',
-      selector: '#userNumber',
+      name: "電話番号を入力",
+      action: "fill",
+      selector: "#userNumber",
       execute: async () => {
-        await page.fill('#userNumber', input.mobile);
+        await page.fill("#userNumber", input.mobile);
       },
-      hint: 'Mobile Number入力欄'
+      hint: "Mobile Number入力欄"
     },
 
     // Step 6: 生年月日を入力
     {
-      name: '生年月日を入力',
-      action: 'playwright_code',
+      name: "生年月日を入力",
+      action: "playwright_code",
       execute: async () => {
-        if (input.birth_date !== '') {
+        if (input.birth_date !== "") {
           if (input.birth_date) {
             await page.locator('#dateOfBirthInput').click();
             await page.locator('#dateOfBirthInput').fill(input.birth_date);
@@ -101,15 +101,15 @@ async (page) => {
           
         }
       },
-      hint: '日付ピッカーに生年月日を入力'
+      hint: "日付ピッカーに生年月日を入力"
     },
 
     // Step 7: 科目を入力
     {
-      name: '科目を入力',
-      action: 'playwright_code',
+      name: "科目を入力",
+      action: "playwright_code",
       execute: async () => {
-        if (input.subject !== '') {
+        if (input.subject !== "") {
           if (input.subject) {
             await page.locator('#subjectsInput').fill(input.subject);
             await page.locator('.subjects-auto-complete__option').first().click();
@@ -117,52 +117,52 @@ async (page) => {
           
         }
       },
-      hint: 'Subjects入力欄にオートコンプリートで入力し、候補をクリック'
+      hint: "Subjects入力欄にオートコンプリートで入力し、候補をクリック"
     },
 
     // Step 8: 趣味を選択
     {
-      name: '趣味を選択',
-      action: 'click',
-      selector: 'label[for=\'hobbies-checkbox-1\']',
+      name: "趣味を選択",
+      action: "click",
+      selector: "label[for='hobbies-checkbox-1']",
       execute: async () => {
-        await page.click('label[for=\'hobbies-checkbox-1\']');
+        await page.click("label[for='hobbies-checkbox-1']");
       },
-      hint: 'Sports チェックボックス'
+      hint: "Sports チェックボックス"
     },
 
     // Step 9: 画像をアップロード
     {
-      name: '画像をアップロード',
-      action: 'playwright_code',
+      name: "画像をアップロード",
+      action: "playwright_code",
       execute: async () => {
-        if (input.picture !== '') {
+        if (input.picture !== "") {
           if (input.picture) {
             await page.locator('#uploadPicture').setInputFiles(input.picture);
           }
           
         }
       },
-      hint: 'Picture入力欄にファイルをアップロード'
+      hint: "Picture入力欄にファイルをアップロード"
     },
 
     // Step 10: 住所を入力
     {
-      name: '住所を入力',
-      action: 'fill',
-      selector: '#currentAddress',
+      name: "住所を入力",
+      action: "fill",
+      selector: "#currentAddress",
       execute: async () => {
-        if (input.address !== '') {
-          await page.fill('#currentAddress', input.address);
+        if (input.address !== "") {
+          await page.fill("#currentAddress", input.address);
         }
       },
-      hint: 'Current Address入力欄'
+      hint: "Current Address入力欄"
     },
 
     // Step 11: 広告削除とスクロール
     {
-      name: '広告削除とスクロール',
-      action: 'playwright_code',
+      name: "広告削除とスクロール",
+      action: "playwright_code",
       execute: async () => {
         // 固定広告・フッター・オーバーレイを削除
         await page.evaluate(() => {
@@ -179,15 +179,15 @@ async (page) => {
         await page.waitForTimeout(300);
         
       },
-      hint: '広告・フッターを削除してState/Cityセレクタが見えるようにスクロール'
+      hint: "広告・フッターを削除してState/Cityセレクタが見えるようにスクロール"
     },
 
     // Step 12: 州を選択
     {
-      name: '州を選択',
-      action: 'playwright_code',
+      name: "州を選択",
+      action: "playwright_code",
       execute: async () => {
-        if (input.state !== '') {
+        if (input.state !== "") {
           if (input.state) {
             await page.locator('#state').click({ force: true });
             await page.locator('#state [class*="-menu"]').waitFor({ timeout: 3000 });
@@ -196,15 +196,15 @@ async (page) => {
           
         }
       },
-      hint: 'State ドロップダウンから選択'
+      hint: "State ドロップダウンから選択"
     },
 
     // Step 13: 都市を選択
     {
-      name: '都市を選択',
-      action: 'playwright_code',
+      name: "都市を選択",
+      action: "playwright_code",
       execute: async () => {
-        if (input.city !== '') {
+        if (input.city !== "") {
           if (input.city) {
             await page.locator('#city').click({ force: true });
             await page.locator('#city [class*="-menu"]').waitFor({ timeout: 3000 });
@@ -213,18 +213,18 @@ async (page) => {
           
         }
       },
-      hint: 'City ドロップダウンから選択'
+      hint: "City ドロップダウンから選択"
     },
 
     // Step 14: フォームを送信
     {
-      name: 'フォームを送信',
-      action: 'playwright_code',
+      name: "フォームを送信",
+      action: "playwright_code",
       execute: async () => {
         await page.click('#submit', { force: true });
         
       },
-      hint: 'Submit ボタン'
+      hint: "Submit ボタン"
     }
 
   ];
